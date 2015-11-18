@@ -1,0 +1,16 @@
+import akka.actor._
+import akka.io._
+import akka.util._
+import java.net._
+import com.typesafe.config._
+import org.springframework.jdbc.core._
+import scala.util._
+import akka.event._
+
+class Heartstopper extends TextQueryHandler("^abort$".r) {
+
+        def apply(src: ActorRef, owner: ActorRef, db: JdbcTemplate, config: Config, log: LoggingAdapter, message: String, content: ByteString): Try[Next] = Try {
+                src ! Tcp.Close
+                Next("default", Map("buffer" -> content))
+        }
+}

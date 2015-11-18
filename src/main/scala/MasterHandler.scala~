@@ -1,0 +1,28 @@
+import akka.actor._
+import akka.io._
+import com.typesafe.config._
+import java.net._
+import org.springframework.jdbc.core._
+import scala.collection.JavaConverters._
+
+class MasterHandler(src: ActorRef, client: InetSocketAddress, config: Config, db: JdbcTemplate) extends Actor with ActorLogging {
+	import Tcp._
+
+	override def preStart(): Unit = {
+		config.getObject("modes").entrySet.asScala foreach { e: java.util.Map.Entry[String, ConfigValue] ⇒
+			val modeName = e.getKey
+			val handlerConfig = e.getValue.asInstanceOf[ConfigObject].toConfig
+			context.actorOf(Props(Class.forName(handlerConfig.getString("handler")), src, client, handlerConfig.getStringList("extensions").asScala.toList, handlerConfig.getConfig("config"), db), modeName)
+		}
+	}
+
+	def receive = mode("default")
+
+	def mode(m: String): Receive = {
+		case r: Received ⇒ context.actorSelection(m) ! r
+		case command: Command ⇒ src ! command
+		case PeerClosed ⇒ context stop self
+                case Closed => context stop self
+		case newMode: String ⇒ context become mode(newMode)
+	}
+}

@@ -1,0 +1,15 @@
+import akka.actor._
+import akka.io._
+import akka.util._
+import java.net._
+import com.typesafe.config._
+import org.springframework.jdbc.core._
+import scala.util._
+
+class EchoHandler extends TextQueryHandler("echo:.*".r) {
+
+        def apply(src: ActorRef, owner: ActorRef, db: JdbcTemplate, config: Config, message: String, content: ByteString): Try[Next] = Try {
+                src ! Tcp.Write(ByteString(message))
+                Next("default", content)
+        }
+}

@@ -1,3 +1,0 @@
-import akka.util._
-
-case class Next(mode: String, buffer: ByteString)

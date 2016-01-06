@@ -7,7 +7,7 @@ scalaVersion := "2.11.5"
 resolvers += "Spring IO" at "http://repo.spring.io/release"
 
 val springVersion = "4.1.4.RELEASE"
-val akkaVersion = "2.3.9"
+val akkaVersion = "2.4.1"
 
 libraryDependencies ++= Seq(
   "org.json4s" %% "json4s-jackson" % "3.2.11",

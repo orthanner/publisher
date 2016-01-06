@@ -1,6 +1,7 @@
 import akka.actor._
 import akka.io._
 import akka.util._
+import akka.agent._
 import com.typesafe.config._
 import java.io._
 import java.lang.{ Boolean ⇒ Bool }
@@ -40,14 +41,14 @@ object RequestHandler {
 	val DELETE_BY_NAME = "delete (?<type>image|file) /(?<name>.+)".r
 	val DELETE_LOGO = "delete logo".r
 	val DATE = "date (?<date>[0-9]{1,2} [\\S]+ [0-9]{4})".r
-        val RENAME = "rename (?<type>image|file) (?<id>[\\w]+) (?<to>.+)".r
+  val RENAME = "rename (?<type>image|file) (?<id>[\\w]+) (?<to>.+)".r
 	val COMMIT = "commit".r
 	val ABORT = "abort".r
 	val LIST_BY_DATE = "list (?<date>\\d{1,4}-\\d{1,2}-\\d{1,2})".r
 	val LIST_BY_PERIOD = "list (?<start>\\d{1,4}-\\d{1,2}-\\d{1,2}) (?<end>\\d{1,4}-\\d{1,2}-\\d{1,2})".r
 
-        def success(target: ActorRef)(msg: String): Unit = target ! Tcp.Write(ByteString("+%s\r\n" format msg))
-        def failure(target: ActorRef)(msg: String): Unit = target ! Tcp.Write(ByteString("-%s\r\n" format msg))
+  def success(target: ActorRef)(msg: String): Unit = target ! Tcp.Write(ByteString("+%s\r\n" format msg))
+  def failure(target: ActorRef)(msg: String): Unit = target ! Tcp.Write(ByteString("-%s\r\n" format msg))
 }
 
 class RequestHandler(src: ActorRef, db: JdbcTemplate, client: InetSocketAddress, config: Config) extends Actor with ActorLogging with TxHelpers with JdbcHelpers with Runnable {
@@ -71,12 +72,12 @@ class RequestHandler(src: ActorRef, db: JdbcTemplate, client: InetSocketAddress,
 	val packets = new ConcurrentLinkedQueue[WriteRequest]()
 	val current = new AtomicReference[File]()
 
-        val _success = success(src) _
-        val _failure = failure(src) _
+  val _success = success(src) _
+  val _failure = failure(src) _
 
-        /**
-          *  These come from prefixes, except the first one being just "byte". Each next one is 1024*previous
-          */
+/**
+*  These come from prefixes, except the first one being just "byte". Each next one is 1024*previous
+*/
 	val multipliers = "bkmgtpezy"
 
 	val DATE_FORMAT = new java.text.SimpleDateFormat("yyyy-MM-dd")
@@ -112,7 +113,7 @@ class RequestHandler(src: ActorRef, db: JdbcTemplate, client: InetSocketAddress,
 						case e: IOException ⇒ {
 							log.error("fuck up while storing uploaded file", e)
 							packets.clear()
-                                                        _failure(e.getMessage())
+              _failure(e.getMessage())
 							r.file.delete
 						}
 					}
@@ -172,8 +173,9 @@ class RequestHandler(src: ActorRef, db: JdbcTemplate, client: InetSocketAddress,
 
 	def receive = raw_receive(ByteString.empty)
 
-	def toSizeImpl(acc: Long, power: Int): Long = if (power == 0) acc else toSizeImpl(acc * 1024, power - 1)
-	def toSize(value: String): Long = {
+	private def toSize(value: String): Long = {
+		def toSizeImpl(acc: Long, power: Int): Long = if (power == 0) acc else toSizeImpl(acc * 1024, power - 1)
+
 		val unit = value.last
 		val pos = multipliers.indexOf(unit)
 		if (pos == -1)

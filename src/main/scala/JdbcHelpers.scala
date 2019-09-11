@@ -10,6 +10,8 @@ import scala.util._
 trait JdbcHelpers {
 	type ExtractorFunction[T] = ResultSet ⇒ T
 	type RowMappingFunction[T] = (ResultSet, Integer) ⇒ T
+	type ArgumentType = Int
+	case class TypedArgument (arg: Any, argType: ArgumentType)
 
 	def toObject[T <: Any](v: T): Object = v match {
 		case o: Option[Any] ⇒ toObject(o.orNull)
@@ -31,8 +33,8 @@ trait JdbcHelpers {
 
 	def query[T](db: JdbcTemplate)(query: String, args: Any*)(callback: RowMappingFunction[T]): List[T] = db.query(query, wrap(args.toArray), mappingRows(callback)).asScala.toList
 
-	def find[T](db: JdbcTemplate)(query: String, args: Array[Any], argTypes: Array[Int])(callback: RowMappingFunction[T]): Option[T] = try {
-		Option(db.queryForObject(query, wrap(args), argTypes, mappingRows(callback)))
+	def find[T](db: JdbcTemplate)(query: String, args: Array[TypedArgument])(callback: RowMappingFunction[T]): Option[T] = try {
+		Option(db.queryForObject(query, wrap(args map { _.arg }), args map { _.argType }, mappingRows(callback)))
 	} catch {
 		case e: EmptyResultDataAccessException ⇒ None
 	}
